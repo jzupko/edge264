@@ -308,7 +308,9 @@ void *ADD_VARIANT(worker_loop)(Edge264Decoder *dec) {
 	Edge264Context c;
 	c.d = dec;
 	c.n_threads = dec->n_threads;
+	#if EDGE264_TRACE
 	c.trace_slices = dec->trace_slices;
+	#endif
 	if (c.n_threads)
 		pthread_mutex_lock(&dec->lock);
 	for (;;) {
@@ -815,8 +817,10 @@ static void initialize_task(Edge264Decoder *dec, Edge264Task *t)
  */
 int ADD_VARIANT(parse_slice_layer_without_partitioning)(Edge264Decoder *dec, int non_blocking, void(*free_cb)(void*,int), void *free_arg)
 {
+	#if EDGE264_TRACE
 	static const char * const slice_type_names[5] = {"P", "B", "I", "SP", "SI"};
 	static const char * const disable_deblocking_filter_idc_names[3] = {"enabled", "disabled", "disabled across slices"};
+	#endif
 	
 	// reserving a slot without locking is fine since workers can only unset busy_tasks
 	unsigned avail_tasks;
@@ -1236,10 +1240,12 @@ static void parse_scaling_lists(Edge264Decoder *dec, i8x16 *w4x4, i8x16 *w8x8, i
  */
 int ADD_VARIANT(parse_pic_parameter_set)(Edge264Decoder *dec, int non_blocking,  void(*free_cb)(void*,int), void *free_arg)
 {
+	#if EDGE264_TRACE
 	static const char * const slice_group_map_type_names[7] = {"interleaved",
 		"dispersed", "foreground with left-over", "box-out", "raster scan",
 		"wipe", "explicit"};
 	static const char * const weighted_pred_names[3] = {"average", "explicit", "implicit"};
+	#endif
 	
 	// temp storage, committed if entire NAL is correct
 	Edge264PicParameterSet pps;
@@ -1430,6 +1436,7 @@ static void parse_vui_parameters(Edge264Decoder *dec, Edge264SeqParameterSet *sp
 		0x000a000b, 0x0010000b, 0x00280021, 0x0018000b, 0x0014000b, 0x0020000b,
 		0x00500021, 0x0012000b, 0x000f000b, 0x00400021, 0x00a00063, 0x00040003,
 		0x00030002, 0x00020001};
+	#if EDGE264_TRACE
 	static const char * const video_format_names[8] = {"Component", "PAL",
 		"NTSC", "SECAM", "MAC", [5 ... 7] = "Unknown"};
 	static const char * const colour_primaries_names[32] = {
@@ -1481,6 +1488,7 @@ static void parse_vui_parameters(Edge264Decoder *dec, Edge264SeqParameterSet *sp
 		[11] = "Y'D'zD'x",
 		[12 ... 15] = "Unknown",
 	};
+	#endif
 	
 	if (get_u1(&dec->_gb)) {
 		int aspect_ratio_idc = get_uv(&dec->_gb, 8);
@@ -1666,6 +1674,7 @@ static int parse_seq_parameter_set_mvc_extension(Edge264Decoder *dec, Edge264Seq
  */
 int ADD_VARIANT(parse_seq_parameter_set)(Edge264Decoder *dec, int non_blocking, void(*free_cb)(void*,int), void *free_arg)
 {
+	#if EDGE264_TRACE
 	static const char * const profile_idc_names[256] = {
 		[44] = "CAVLC 4:4:4 Intra",
 		[66] = "Baseline",
@@ -1682,6 +1691,7 @@ int ADD_VARIANT(parse_seq_parameter_set)(Edge264Decoder *dec, int non_blocking, 
 		[244] = "High 4:4:4 Predictive",
 	};
 	static const char * const chroma_format_idc_names[4] = {"4:0:0", "4:2:0", "4:2:2", "4:4:4"};
+	#endif
 	static const uint32_t MaxDpbMbs[64] = {
 		396, 396, 396, 396, 396, 396, 396, 396, 396, 396, 396, // level 1
 		900, // levels 1b and 1.1
