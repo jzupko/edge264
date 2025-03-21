@@ -1,3 +1,11 @@
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+#pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#endif
+
 /** MAYDO:
  * _ Replace P and INIT_P with PX versions
  * _ try to optimize shld with extr on ARM when shift is constant
@@ -109,22 +117,29 @@ const uint8_t *edge264_find_start_code(const uint8_t *buf, const uint8_t *end) {
 static int parse_access_unit_delimiter(Edge264Decoder *dec, int non_blocking, void(*free_cb)(void*,int), void *free_arg) {
 	refill(&dec->_gb, 0);
 	int primary_pic_type = get_uv(&dec->_gb, 3);
+	#if EDGE264_TRACE
 	if (dec->trace_headers)
 		fprintf(dec->trace_headers, "<k>primary_pic_type</k><v>%d</v>\n", primary_pic_type);
+	#endif
 	if (dec->_gb.msb_cache != (size_t)1 << (SIZE_BIT - 1) || (dec->_gb.lsb_cache & (dec->_gb.lsb_cache - 1)) || (intptr_t)(dec->_gb.end - dec->_gb.CPB) > 0)
 		return EBADMSG;
 	return 0;
 }
 
 
-
+#if EDGE264_TRACE
 Edge264Decoder *edge264_alloc(int n_threads, FILE *trace_headers, FILE *trace_slices) {
+#else
+Edge264Decoder *edge264_alloc(int n_threads) {
+#endif
 	Edge264Decoder *dec = calloc(1, sizeof(Edge264Decoder));
 	if (dec == NULL)
 		return NULL;
 	dec->n_threads = n_threads;
+	#if EDGE264_TRACE
 	dec->trace_headers = trace_headers;
 	dec->trace_slices = trace_slices;
+	#endif	
 	dec->taskPics_v = set8(-1);
 	
 	// select parser functions based on CPU capabilities
@@ -169,6 +184,7 @@ Edge264Decoder *edge264_alloc(int n_threads, FILE *trace_headers, FILE *trace_sl
 			w = worker_loop_v3;
 		}
 	#endif
+	#if EDGE264_TRACE
 	if (trace_headers || trace_slices) {
 		#ifdef TEST_DEBUG
 			dec->parse_nal_unit[1] = dec->parse_nal_unit[5] = parse_slice_layer_without_partitioning_debug;
@@ -181,6 +197,7 @@ Edge264Decoder *edge264_alloc(int n_threads, FILE *trace_headers, FILE *trace_sl
 			return free(dec), NULL;
 		#endif
 	}
+	#endif
 	
 	// get the number of logical cores if requested
 	if (n_threads < 0) {
@@ -272,6 +289,7 @@ void edge264_free(Edge264Decoder **pdec) {
  */
 int edge264_decode_NAL(Edge264Decoder *dec, const uint8_t *buf, const uint8_t *end, int non_blocking, void(*free_cb)(void*,int), void *free_arg, const uint8_t **next_NAL)
 {
+	#if EDGE264_TRACE
 	static const char * const nal_unit_type_names[32] = {
 		[0] = "Unknown",
 		[1] = "Coded slice of a non-IDR picture",
@@ -296,6 +314,7 @@ int edge264_decode_NAL(Edge264Decoder *dec, const uint8_t *buf, const uint8_t *e
 		[21] = "Coded slice extension for a depth view component or a 3D-AVC texture view component",
 		[22 ... 31] = "Unknown",
 	};
+	#endif
 	
 	// initial checks before parsing
 	if (dec == NULL || buf == NULL && end != NULL)
@@ -314,12 +333,14 @@ int edge264_decode_NAL(Edge264Decoder *dec, const uint8_t *buf, const uint8_t *e
 	}
 	dec->nal_ref_idc = buf[0] >> 5;
 	dec->nal_unit_type = buf[0] & 0x1f;
+	#if EDGE264_TRACE
 	if (dec->trace_headers) {
 		fprintf(dec->trace_headers, "<k>nal_ref_idc</k><v>%u</v>\n"
 			"<k>nal_unit_type</k><v>%u (%s)</v>\n",
 			dec->nal_ref_idc,
 			dec->nal_unit_type, nal_unit_type_names[dec->nal_unit_type]);
 	}
+	#endif
 	
 	// initialize the parsing context if we can parse the current NAL
 	int ret = 0;
@@ -338,9 +359,10 @@ int edge264_decode_NAL(Edge264Decoder *dec, const uint8_t *buf, const uint8_t *e
 			buf = minp(dec->_gb.CPB - 2, dec->_gb.end);
 		}
 	}
+	#if EDGE264_TRACE
 	if (dec->trace_headers)
 		fprintf(dec->trace_headers, ret ? "<e>%s</e>\n" : "<s>Success</s>\n", strerror(ret));
-	
+	#endif
 	// for 0, ENOTSUP and EBADMSG we may free or advance the buffer pointer
 	if (ret == 0 || ret == ENOTSUP || ret == EBADMSG) {
 		if (free_cb && !(ret == 0 && 1048610 & 1 << dec->nal_unit_type)) // 1, 5 or 20
@@ -1115,3 +1137,7 @@ const int8_t cabac_context_init[4][1024][2] __attribute__((aligned(16))) = {{
 	{ -11,  91}, { -30, 127}, {  -5,  79}, { -11, 104}, { -11,  91}, { -30, 127},
 	{  -5,  79}, { -11, 104}, { -11,  91}, { -30, 127},
 }};
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

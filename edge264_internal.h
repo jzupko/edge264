@@ -317,8 +317,10 @@ typedef struct Edge264Decoder {
 	uint32_t pic_reference_flags; // to be applied after decoding all slices of the current picture
 	uint32_t pic_long_term_flags; // to be applied after decoding all slices of the current picture
 	int64_t DPB_format; // should match format in SPS otherwise triggers resize
+#if EDGE264_TRACE
 	FILE *trace_headers;
 	FILE *trace_slices;
+#endif
 	uint8_t *frame_buffers[32];
 	Parser parse_nal_unit[32];
 	union { int8_t LongTermFrameIdx[32]; i8x16 LongTermFrameIdx_v[2]; };
@@ -516,7 +518,7 @@ enum IntraChromaModes {
 /**
  * Debugging functions
  */
-#ifdef TRACE
+#if EDGE264_TRACE
 	#define print_header(dec, ...) if (dec->trace_headers) { fprintf(dec->trace_headers, __VA_ARGS__); }
 	#define print_slice(ctx, ...) if (ctx->trace_slices) { fprintf(ctx->trace_slices, __VA_ARGS__); }
 	static always_inline const char *red_if(int cond) { return (cond) ? " style='background-color:#fee'" : ""; }
@@ -524,6 +526,7 @@ enum IntraChromaModes {
 	#define print_header(...) ((void)0)
 	#define print_slice(...) ((void)0)
 #endif
+#if EDGE264_TRACE
 #define print_i8x16(dec, a) {\
 	i8x16 _v = a;\
 	fprintf(dec->trace_headers, "<k>" #a "</k><v>");\
@@ -548,7 +551,7 @@ enum IntraChromaModes {
 	for (int _i = 0; _i < 4; _i++)\
 		fprintf(dec->trace_headers, "%6d ", _v[_i]);\
 	fprintf(dec->trace_headers, "</v>\n");}
-
+#endif
 
 
 /**

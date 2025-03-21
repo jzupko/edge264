@@ -308,7 +308,9 @@ void *ADD_VARIANT(worker_loop)(Edge264Decoder *dec) {
 	Edge264Context c;
 	c.d = dec;
 	c.n_threads = dec->n_threads;
+	#if EDGE264_TRACE
 	c.trace_slices = dec->trace_slices;
+	#endif
 	if (c.n_threads)
 		pthread_mutex_lock(&dec->lock);
 	for (;;) {

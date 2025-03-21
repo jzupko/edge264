@@ -8,8 +8,12 @@
 	#define shlrrs32(a, l, r, off) ((((i32x4)(a) << (l)) + (off)) >> (r))
 	#define shrrs32(a, i, off) (((i32x4)a + off) >> i)
 	#define shrps32(a, b, i) (i16x8)_mm_packs_epi32((i32x4)(a) >> i, (i32x4)(b) >> i)
+	#ifndef unziplo32
 	#define unziplo32(a, b) shuffleps(a, b, 0, 2, 0, 2)
+	#endif
+	#ifndef unziphi32
 	#define unziphi32(a, b) shuffleps(a, b, 1, 3, 1, 3)
+	#endif
 	static always_inline i16x8 scale32(i32x4 c0, i32x4 c1, u16x8 ls, int mul, i32x4 off, i32x4 sh) {return packs32(_mm_sra_epi32((i32x4)_mm_madd_epi16(cvtlo16u32(ls), c0) + off, sh), _mm_sra_epi32((i32x4)_mm_madd_epi16(ziphi16(ls, (i8x16){}), c1) + off, sh));}
 #elif defined(__ARM_NEON)
 	#define addlou8s16(a, b) (i16x8)vaddw_u8(b, vget_low_u8(a))
